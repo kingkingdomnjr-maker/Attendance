@@ -1,0 +1,27 @@
+[
+  {
+    "id": "133e2a08-fa4a-4297-9e4c-3aa3b89d9464",
+    "name": "Test Student Two",
+    "rollNumber": "TEST002",
+    "registeredAt": "2026-10-17T11:52:42.898Z"
+  },
+  {
+    "id": "ad576e16-0b5c-45fd-aa4c-903541d16b49",
+    "name": "Test Student",
+    "rollNumber": "TEST999",
+    "registeredAt": "2026-10-17T16:55:47.549Z"
+  },
+  {
+    "id": "1fd9cf9c-0e65-4df0-893e-00038561cc4f",
+    "name": "hi",
+    "rollNumber": "54",
+    "registeredAt": "2026-10-17T17:38:52.830Z"
+  },
+  {
+    "id": "7ab6f681-8ad4-4934-a5cc-290c3360b14a",
+    "name": "Hope",
+    "rollNumber": "12",
+    "registeredAt": "2026-10-18T05:30:27.144Z",
+    "macAddress": "3a:f1:cb:34:77:9f"
+  }
+]

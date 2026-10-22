@@ -1,0 +1,47 @@
+[
+  {
+    "studentId": "7ab6f681-8ad4-4934-a5cc-290c3360b14a",
+    "name": "Hope",
+    "rollNumber": "12",
+    "date": "2026-10-19",
+    "sessionStartedAt": 1792425258544,
+    "status": "Present",
+    "markedAt": "2026-10-19T15:54:42.358Z"
+  },
+  {
+    "studentId": "7ab6f681-8ad4-4934-a5cc-290c3360b14a",
+    "name": "Hope",
+    "rollNumber": "12",
+    "date": "2026-10-19",
+    "sessionStartedAt": 1792430568665,
+    "status": "Present",
+    "markedAt": "2026-10-19T17:22:52.443Z"
+  },
+  {
+    "studentId": "7ab6f681-8ad4-4934-a5cc-290c3360b14a",
+    "name": "Hope",
+    "rollNumber": "12",
+    "date": "2026-10-20",
+    "sessionStartedAt": 1792478667160,
+    "status": "Present",
+    "markedAt": "2026-10-20T06:46:11.730Z"
+  },
+  {
+    "studentId": "7ab6f681-8ad4-4934-a5cc-290c3360b14a",
+    "name": "Hope",
+    "rollNumber": "12",
+    "date": "2026-10-20",
+    "sessionStartedAt": 1792480493291,
+    "status": "Present",
+    "markedAt": "2026-10-20T07:15:05.594Z"
+  },
+  {
+    "studentId": "7ab6f681-8ad4-4934-a5cc-290c3360b14a",
+    "name": "Hope",
+    "rollNumber": "12",
+    "date": "2026-10-20",
+    "sessionStartedAt": 1792516385938,
+    "status": "Present",
+    "markedAt": "2026-10-20T17:13:11.418Z"
+  }
+]
