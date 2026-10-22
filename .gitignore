@@ -11,6 +11,19 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local backend data
+/backend/attendance.db
+/backend/attendance.db-*
+/backend/attendance.json
+/backend/students.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
