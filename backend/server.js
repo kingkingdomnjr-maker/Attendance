@@ -162,62 +162,129 @@ app.use(
 app.use(express.json());
 
 
-app.post("/api/students/register", (req, res) => {
-  const { name, rollNumber } = req.body;
+
+app.post("/api/students/register", async (req, res) => {
+  const session = getSessionStatus();
+
+  if (!session) {
+    return res.status(403).json({
+      message: "Start an attendance session first.",
+    });
+  }
+
+  const { name, macAddress } = req.body;
 
   if (
     typeof name !== "string" ||
-    typeof rollNumber !== "string" ||
     !name.trim() ||
-    !rollNumber.trim() 
+    typeof macAddress !== "string" ||
+    !macAddress.trim()
   ) {
     return res.status(400).json({
-      message: "Name and roll number are required."
+      message: "Name and device selection are required.",
     });
   }
 
-  const students = readStudents();
+  try {
+    // Detect devices connected to the admin's hotspot.
+    const scriptPath = path.join(__dirname, "detect-devices.ps1");
 
-  const normalizedRollNumber = rollNumber.trim().toUpperCase();
+    const { stdout } = await runFile(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        scriptPath,
+      ],
+      {
+        timeout: 15000,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024,
+      }
+    );
 
-  const duplicate = students.some(
-    (student) =>
-      student.rollNumber === normalizedRollNumber
-  );
+    const data = JSON.parse(stdout.trim());
+    const selectedMac = macAddress.trim().toLowerCase();
 
-  if (duplicate) {
-    return res.status(409).json({
-      message: "This roll number is already registered.",
+    const deviceIsConnected = (data.clients || []).some(
+      (client) =>
+        client.macAddress &&
+        client.macAddress.trim().toLowerCase() === selectedMac
+    );
+
+    if (!deviceIsConnected) {
+      return res.status(400).json({
+        message: "Selected phone is not connected to the admin's hotspot. Refresh the device list.",
+      });
+    }
+
+    const students = readStudents();
+
+    const alreadyRegistered = students.some(
+      (student) =>
+        student.macAddress &&
+        student.macAddress.trim().toLowerCase() === selectedMac
+    );
+
+    if (alreadyRegistered) {
+      return res.status(409).json({
+        message: "This phone is already registered to a student.",
+      });
+    }
+
+    // Generate the next available SDC roll number.
+    let number = 1;
+    let rollNumber;
+
+    do {
+      rollNumber = `SDC${String(number).padStart(3, "0")}`;
+      number++;
+    } while (
+      students.some(
+        (student) =>
+          String(student.rollNumber).toUpperCase() === rollNumber
+      )
+    );
+
+    const student = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      rollNumber,
+      macAddress: selectedMac,
+      registeredAt: new Date().toISOString(),
+    };
+
+    saveStudents([...students, student]);
+
+    return res.status(201).json({
+      message: `Registration successful! Your roll number is ${rollNumber}.`,
+      student,
+    });
+  } catch (error) {
+    console.error("Student registration failed:", error.message);
+
+    return res.status(500).json({
+      message: "Could not complete registration.",
     });
   }
-
-  const student = {
-    id: crypto.randomUUID(),
-    name: name.trim(),
-    rollNumber: normalizedRollNumber,
-    registeredAt: new Date().toISOString(),
-  };
-
-  students.push(student);
-  saveStudents(students);
-
-  res.status(201).json({
-    message: "Student registered successfully.",
-    student,
-  });
-});
-
-app.get("/api/students", verifyAdmin, (req, res) => {
-  const students = readStudents();
-
-  res.json({ students });
 });
 
 app.get("/api/attendance", verifyAdmin, (req, res) => {
-  const records = readAttendance();
+  try {
+    const records = readAttendance();
+    res.json({ records });
+  } catch (error) {
+    console.error("Could not load attendance:", error.message);
 
-  res.json({ records });
+    res.status(500).json({
+      message: "Could not load attendance records.",
+    });
+  }
 });
+
 
 app.get("/api/attendance/history", verifyAdmin, (req, res) => {
   const sessions = db.prepare(`
@@ -371,7 +438,51 @@ app.post("/api/session/start", verifyAdmin, (req, res) => {
     session: activeSession,
   });
 });
+app.get("/api/registration/devices", async (req, res) => {
+  const session = getSessionStatus();
 
+  if (!session) {
+    return res.status(403).json({
+      message: "Start an attendance session first.",
+    });
+  }
+
+  try {
+    const scriptPath = path.join(__dirname, "detect-devices.ps1");
+
+    const { stdout } = await runFile(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        scriptPath,
+      ],
+      {
+        timeout: 15000,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024,
+      }
+    );
+
+    const data = JSON.parse(stdout.trim());
+
+    res.json({
+      clients: data.clients || [],
+    });
+  } catch (error) {
+    console.error(
+      "Registration device detection failed:",
+      error.message
+    );
+
+    res.status(500).json({
+      message: "Could not detect hotspot devices.",
+    });
+  }
+});
 // 2. Check the current session.
 app.get("/api/session", (req, res) => {
   const session = getSessionStatus();
@@ -388,6 +499,7 @@ app.get("/api/session", (req, res) => {
     session,
   });
 });
+
 
 // 3. Stop the session manually.
 app.post("/api/session/stop", verifyAdmin, (req, res) => {
@@ -492,6 +604,18 @@ res.json({
     res.status(500).json({
       error: "Could not retrieve hotspot clients.",
       details: error.message,
+    });
+  }
+});
+app.get("/api/students", verifyAdmin, (req, res) => {
+  try {
+    const students = readStudents();
+    res.json({ students });
+  } catch (error) {
+    console.error("Could not load students:", error.message);
+
+    res.status(500).json({
+      message: "Could not load registered students.",
     });
   }
 });

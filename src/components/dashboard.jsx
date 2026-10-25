@@ -213,11 +213,16 @@ async function apiRequest(endpoint, method = "GET") {
     }
   }
 
-  useEffect(() => {
+ useEffect(() => {
+  const token = sessionStorage.getItem("adminToken");
+
+  if (token) {
     fetchAttendance();
-    fetchCurrentSession();
     loadRegisteredStudents();
-  }, []);
+  }
+
+  fetchCurrentSession();
+}, []);
 
   const totalStudents = registeredStudents.length;
 
