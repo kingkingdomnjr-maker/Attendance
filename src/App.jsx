@@ -13,6 +13,7 @@ import Students from "./components/Students";
 import AdminLogin from "./components/AdminLogin";
 import StudentRegister from "./components/StudentRegister";
 import AttendanceHistory from "./components/AttendanceHistory";
+import Home from "./components/Home";
 
 function App() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ function App() {
   function handleLoginSuccess(newToken) {
     sessionStorage.setItem("adminToken", newToken);
     setToken(newToken);
+    navigate("/dashboard", { replace: true });
   }
 
   function handleLogout() {
@@ -43,9 +45,12 @@ function App() {
           <p className="sidebar-subtitle">
             Attendance System
           </p>
+          <NavLink to="/" end className="sidebar-link">
+            Home
+          </NavLink>
 
           <nav className="sidebar-nav">
-            <NavLink to="/" end className="sidebar-link">
+            <NavLink to="/dashboard" end className="sidebar-link">
               Dashboard
             </NavLink>
 
@@ -84,7 +89,7 @@ function App() {
         path="/login"
         element={
           token ? (
-            <Navigate to="/" replace />
+            <Navigate to="/dashboard" replace />
           ) : (
             <AdminLogin
               onLoginSuccess={handleLoginSuccess}
@@ -93,21 +98,7 @@ function App() {
         }
       />
 
-      <Route
-        path="/"
-        element={
-          token ? (
-            <AdminLayout>
-              <Dashboard />
-            </AdminLayout>
-          ) : (
-            <AdminLogin
-              onLoginSuccess={handleLoginSuccess}
-            />
-          )
-        }
-      />
-
+      <Route path="/" element={<Home />} />
       <Route
         path="/students"
         element={
@@ -120,6 +111,18 @@ function App() {
           )
         }
       />
+      <Route
+  path="/dashboard"
+  element={
+    token ? (
+      <AdminLayout>
+        <Dashboard />
+      </AdminLayout>
+    ) : (
+      <Navigate to="/login" replace />
+    )
+  }
+/>
 
       <Route
         path="/history"

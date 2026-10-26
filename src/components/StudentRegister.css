@@ -1,0 +1,271 @@
+
+.registration-page {
+  min-height: 100vh;
+  padding: 36px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  color: #171717;
+  font-family: Arial, sans-serif;
+}
+
+.registration-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 32px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.06);
+}
+
+.registration-header {
+  margin-bottom: 26px;
+}
+
+.club-label {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #555555;
+}
+
+.registration-header h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+}
+
+.registration-header > p:last-child,
+.device-heading p {
+  margin: 0;
+  color: #737373;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.connection-notice{
+  margin-bottom: 22px;
+  padding: 14px;
+  background: #f8f8f8;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.form-group {
+  margin-bottom: 26px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-group input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #d4d4d4;
+  border-radius: 9px;
+  font-size: 15px;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: #171717;
+}
+
+.device-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.device-heading h2 {
+  margin: 0 0 5px;
+  font-size: 17px;
+}
+
+.refresh-button {
+  padding: 9px 12px;
+  background: white;
+  border: 1px solid #d4d4d4;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.device-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.device-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dedede;
+  border-radius: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.device-option.selected {
+  border-color: #171717;
+  background: #f7f7f7;
+}
+
+.device-option input {
+  accent-color: #171717;
+}
+
+.phone-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: #eeeeee;
+  font-size: 24px;
+}
+
+.device-details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.device-details strong {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.device-details small {
+  overflow-wrap: anywhere;
+  color: #737373;
+  font-size: 11px;
+}
+
+.device-check {
+  font-weight: 700;
+}
+
+.empty-devices {
+  margin-bottom: 22px;
+  padding: 20px;
+  border: 1px dashed #cccccc;
+  border-radius: 10px;
+  text-align: center;
+  color: #737373;
+  font-size: 13px;
+}
+
+.roll-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.roll-info span,
+.roll-info strong {
+  font-size: 13px;
+}
+
+.roll-info span {
+  color: #737373;
+}
+
+.primary-button {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 9px;
+  background: #171717;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background: #333333;
+}
+
+.primary-button:disabled,
+.refresh-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.status-message {
+  margin: 14px 0;
+  padding: 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.success-message {
+  background: #eef8ef;
+  color: #216b31;
+}
+
+.error-message {
+  background: #fff0f0;
+  color: #a52323;
+}
+
+.success-card {
+  text-align: center;
+}
+
+.success-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #eaf6ec;
+  color: #216b31;
+  font-size: 30px;
+}
+
+.success-card h1 {
+  margin: 0 0 12px;
+  font-size: 26px;
+}
+
+.success-card > p {
+  color: #737373;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 480px) {
+  .registration-page {
+    padding: 18px 12px;
+    align-items: flex-start;
+  }
+
+  .registration-card {
+    padding: 22px 18px;
+    border-radius: 14px;
+  }
+
+  .registration-header h1 {
+    font-size: 24px;
+  }
+}

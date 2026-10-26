@@ -1,0 +1,160 @@
+
+.home-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 36px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  color: #171717;
+  font-family: Arial, sans-serif;
+}
+
+.home-content {
+  width: 100%;
+  max-width: 900px;
+}
+
+.home-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.home-club-label {
+  margin: 0 0 12px;
+  color: #555555;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.home-header h1 {
+  margin: 0 0 12px;
+  font-size: 36px;
+}
+
+.home-subtitle {
+  margin: 0;
+  color: #737373;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.home-session-status {
+  margin-bottom: 24px;
+  padding: 17px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.session-status-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.session-status-dot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #737373;
+}
+
+.session-active .session-status-dot {
+  background: #16803c;
+}
+
+.session-inactive .session-status-dot {
+  background: #dc2626;
+}
+
+.session-status-heading strong {
+  font-size: 14px;
+}
+
+.home-session-status p {
+  margin: 9px 0 0 19px;
+  color: #737373;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.home-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.home-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 245px;
+  padding: 25px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #171717;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.home-card:hover {
+  transform: translateY(-3px);
+  border-color: #bdbdbd;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+}
+
+.home-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 18px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  font-size: 27px;
+}
+
+.home-card h2 {
+  margin: 0 0 10px;
+  font-size: 19px;
+}
+
+.home-card p {
+  margin: 0 0 22px;
+  color: #737373;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.home-card-action {
+  margin-top: auto;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .home-page {
+    padding: 28px 16px;
+    align-items: flex-start;
+  }
+
+  .home-header h1 {
+    font-size: 29px;
+  }
+
+  .home-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .home-card {
+    min-height: 210px;
+    padding: 22px;
+  }
+}
