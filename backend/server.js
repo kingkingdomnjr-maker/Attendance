@@ -7,7 +7,7 @@ const { promisify } = require("util");
 const fs = require("fs");
 
 const bcrypt = require("bcryptjs");
-require("dotenv").config();
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const crypto = require("crypto");
 const db = require("./database");
 

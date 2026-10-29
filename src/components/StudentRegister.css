@@ -22,6 +22,28 @@
 
 .registration-header {
   margin-bottom: 26px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap:15px;
+}
+.home-button {
+  padding: 8px 12px;
+  background: #171717;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  width:15%;
+  text-decoration:none;
+  text-align:center;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.home-button:hover {
+  background-color: #535353;
+  transform: scale(1.05);
 }
 
 .club-label {

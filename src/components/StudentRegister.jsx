@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import "./StudentRegister.css";
+import { Link } from "react-router-dom";
 
 const API_URL = "http://192.168.137.1:3001";
 
@@ -141,9 +142,12 @@ function StudentRegister() {
     <main className="registration-page">
       <section className="registration-card">
         <header className="registration-header">
+          <div className="registration-heading">
           <p className="club-label">SKILL DEVELOPMENT CLUB</p>
           <h1>Student Registration</h1>
           <p>Register your details and link your connected phone.</p>
+          </div>
+            <Link to="/" className="home-button">Home</Link>
         </header>
 
         {sessionUnavailable ? (

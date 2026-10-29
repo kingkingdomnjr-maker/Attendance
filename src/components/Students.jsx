@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 
 function Students() {
   const [students, setStudents] = useState([]);
@@ -9,10 +9,9 @@ function Students() {
     async function loadStudents() {
       try {
         const token = sessionStorage.getItem("adminToken");
-
         const response = await fetch("http://localhost:3001/api/students", {
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
 

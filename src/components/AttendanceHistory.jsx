@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 
 function AttendanceHistory() {
   const [history, setHistory] = useState([]);
@@ -9,22 +9,16 @@ function AttendanceHistory() {
     async function loadHistory() {
       try {
         const token = sessionStorage.getItem("adminToken");
-
-        const response = await fetch(
-          "http://localhost:3001/api/attendance/history",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await fetch("http://localhost:3001/api/attendance/history", {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.message || "Could not load attendance history."
-          );
+          throw new Error(data.message || "Could not load attendance history.");
         }
 
         setHistory(data.history || []);
@@ -55,17 +49,12 @@ function AttendanceHistory() {
       ) : (
         history.map((day) => (
           <section key={day.date}>
-            <h2>
-              {new Date(`${day.date}T00:00:00`).toLocaleDateString()}
-            </h2>
+            <h2>{new Date(`${day.date}T00:00:00`).toLocaleDateString()}</h2>
 
             {day.sessions.map((session) => (
               <div key={session.sessionStartedAt}>
                 <h3>
-                  Session at{" "}
-                  {new Date(
-                    session.sessionStartedAt
-                  ).toLocaleTimeString()}
+                  Session at {new Date(session.sessionStartedAt).toLocaleTimeString()}
                 </h3>
 
                 {session.presentStudents.length === 0 ? (
@@ -73,9 +62,7 @@ function AttendanceHistory() {
                 ) : (
                   session.presentStudents.map((student) => (
                     <p key={student.studentId}>
-                      {student.name} — Roll No: {student.rollNumber}
-                      {" — "}
-                      {student.status}
+                      {student.name} — Roll No: {student.rollNumber} — {student.status}
                     </p>
                   ))
                 )}
