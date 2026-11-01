@@ -155,11 +155,12 @@ app.use(
     origin: [
       /^http:\/\/localhost:517[3-9]$/,
       /^http:\/\/192\.168\.137\.1:517[3-9]$/,
-    ],
+      process.env.FRONTEND_URL,
+    ].filter(Boolean),
   })
 );
-app.use(express.json());
 
+app.use(express.json());
 
 
 app.post("/api/students/register", async (req, res) => {
