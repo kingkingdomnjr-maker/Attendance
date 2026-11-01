@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import API_URL from "../api";
 
 function Students() {
   const [students, setStudents] = useState([]);
@@ -9,7 +10,7 @@ function Students() {
     async function loadStudents() {
       try {
         const token = sessionStorage.getItem("adminToken");
-        const response = await fetch("http://localhost:3001/api/students", {
+        const response = await fetch(`${API_URL}/api/students`, {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },

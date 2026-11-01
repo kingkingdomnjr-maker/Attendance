@@ -152,13 +152,12 @@ let activeSession = null;
 
 app.use(
   cors({
-    origin:  [
+    origin: [
       /^http:\/\/localhost:517[3-9]$/,
       /^http:\/\/192\.168\.137\.1:517[3-9]$/,
     ],
   })
 );
-
 app.use(express.json());
 
 
@@ -398,10 +397,13 @@ app.post("/api/admin/login", async (req, res) => {
 });
 
 function getSessionStatus() {
-  if (
-    activeSession &&
-    Date.now() >= activeSession.endsAt
-  ) {
+  if (activeSession && Date.now() >= activeSession.endsAt) {
+    db.prepare(`
+      UPDATE sessions
+      SET active = 0
+      WHERE startedAt = ?
+    `).run(String(activeSession.startedAt));
+
     activeSession = null;
   }
 
@@ -503,12 +505,20 @@ app.get("/api/session", (req, res) => {
 
 // 3. Stop the session manually.
 app.post("/api/session/stop", verifyAdmin, (req, res) => {
-  if (!getSessionStatus()) {
+  const session = getSessionStatus();
+
+  if (!session) {
     return res.json({
       message: "No active session.",
       active: false,
     });
   }
+
+  db.prepare(`
+    UPDATE sessions
+    SET active = 0
+    WHERE startedAt = ?
+  `).run(String(session.startedAt));
 
   activeSession = null;
 
@@ -517,9 +527,8 @@ app.post("/api/session/stop", verifyAdmin, (req, res) => {
     active: false,
   });
 });
-
 // 4. Detect hotspot devices ONLY during an active session.
-app.get("/api/devices", verifyAdmin, async (req, res) => {
+app.post("/api/devices", verifyAdmin, async (req, res) => {
   const session = getSessionStatus();
 
   if (!session) {
@@ -532,77 +541,56 @@ app.get("/api/devices", verifyAdmin, async (req, res) => {
   }
 
   try {
-    const scriptPath = path.join(
-      __dirname,
-      "detect-devices.ps1"
-    );
+    const data = req.body;
 
-    const { stdout } = await runFile(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        scriptPath,
-      ],
-      {
-        timeout: 15000,
-        windowsHide: true,
-        maxBuffer: 1024 * 1024,
-      }
-    );
-
-    
-const data = JSON.parse(stdout.trim());
-
-// Load registered students
-const students = readStudents();
-const markedStudents = [];
-
-// Check each connected hotspot device
-for (const client of data.clients || []) {
-  if (!client.macAddress) {
-    continue;
-  }
-
-  const deviceMac = client.macAddress.trim().toLowerCase();
-
-  // Find the student linked to this device
-  const student = students.find(
-    (item) =>
-      item.macAddress &&
-      item.macAddress.trim().toLowerCase() === deviceMac
-  );
-
-  // Mark the student present if linked
-  if (student) {
-    const wasMarked = markStudentPresent(student, session);
-
-    
-    if (wasMarked) {
-      markedStudents.push({
-        name: student.name,
-        rollNumber: student.rollNumber,
+    if (!Array.isArray(data.clients)) {
+      return res.status(400).json({
+        error: "Invalid device data received.",
       });
     }
-  }
-}
 
-res.json({
-  active: true,
-  ...data,
-  markedStudents,
-});
+    // Load registered students
+    const students = readStudents();
+    const markedStudents = [];
+
+    // Check each connected hotspot device
+    for (const client of data.clients) {
+      if (!client.macAddress) {
+        continue;
+      }
+
+      const deviceMac = client.macAddress.trim().toLowerCase();
+
+      // Find the student linked to this device
+      const student = students.find(
+        (item) =>
+          item.macAddress &&
+          item.macAddress.trim().toLowerCase() === deviceMac
+      );
+
+      // Mark the student present if linked
+      if (student) {
+        const wasMarked = markStudentPresent(student, session);
+
+        if (wasMarked) {
+          markedStudents.push({
+            name: student.name,
+            rollNumber: student.rollNumber,
+          });
+        }
+      }
+    }
+
+    res.json({
+      active: true,
+      ...data,
+      markedStudents,
+    });
   } catch (error) {
-    console.error(
-      "Device detection failed:",
-      error.message
-    );
+    console.error("Device processing failed:", error.message);
 
     res.status(500).json({
-      error: "Could not retrieve hotspot clients.",
+      error: "Could not process hotspot clients.",
       details: error.message,
     });
   }
@@ -673,8 +661,8 @@ app.post("/api/students/link-device", verifyAdmin, (req, res) => {
 });
 
 
-app.listen(3001, "0.0.0.0", () => {
-  console.log(
-    "Attendance backend running at http://localhost:3001"
-  );
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Attendance backend running on port ${PORT}`);
 });

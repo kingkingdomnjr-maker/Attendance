@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import API_URL from "../api";
 
 function AdminLogin({ onLoginSuccess }) {
   const [username, setUsername] = useState("");
@@ -14,7 +15,7 @@ function AdminLogin({ onLoginSuccess }) {
 
     try {
       const response = await fetch(
-        "http://localhost:3001/api/admin/login",
+        `${API_URL}/api/admin/login`,
         {
           method: "POST",
           headers: {

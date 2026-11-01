@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import API_URL from "../api";
 
 function Dashboard() {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -12,7 +13,7 @@ function Dashboard() {
   async function fetchAttendance() {
     try {
       const token = sessionStorage.getItem("adminToken");
-      const response = await fetch("http://localhost:3001/api/attendance", {
+      const response = await fetch(`${API_URL}/api/attendance`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -31,7 +32,7 @@ function Dashboard() {
 
   async function fetchCurrentSession() {
     try {
-      const response = await fetch("http://localhost:3001/api/session");
+      const response = await fetch(`${API_URL}/api/session`);
       const data = await response.json();
 
       if (data.active && data.session) {
@@ -46,32 +47,35 @@ function Dashboard() {
     }
   }
 
-  async function apiRequest(endpoint, method = "GET") {
-    const token = sessionStorage.getItem("adminToken");
-    const response = await fetch(`http://localhost:3001${endpoint}`, {
-      method,
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
+  async function apiRequest(endpoint, method = "GET", body = null) {
+  const token = sessionStorage.getItem("adminToken");
 
-    const text = await response.text();
-    let data;
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
 
-    try {
-      data = JSON.parse(text);
-    } catch {
-      throw new Error(
-        `The API ${endpoint} returned HTML or invalid JSON. Check the backend route.`
-      );
-    }
+  const text = await response.text();
+  let data;
 
-    if (!response.ok) {
-      throw new Error(data.message || data.error || "Request failed.");
-    }
-
-    return data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(
+      `The API ${endpoint} returned HTML or invalid JSON. Check the backend route.`
+    );
   }
+
+  if (!response.ok) {
+    throw new Error(data.message || data.error || "Request failed.");
+  }
+
+  return data;
+}
 
   async function loadRegisteredStudents() {
     setLoading(true);
@@ -142,19 +146,30 @@ function Dashboard() {
   }
 
   const intervalId = setInterval(async () => {
-    try {
-      const data = await apiRequest("/api/devices");
+  try {
+    const localResponse = await fetch("http://localhost:3002/devices");
 
-      if (data.active) {
-        await fetchAttendance();
-      } else {
-        setSessionActive(false);
-        setDevices([]);
-      }
-    } catch (error) {
-      console.error("Automatic device detection failed:", error.message);
+    if (!localResponse.ok) {
+      throw new Error("Local device detection failed.");
     }
-  }, 5000);
+
+    const deviceData = await localResponse.json();
+
+    const data = await apiRequest(
+      "/api/devices",
+      "POST",
+      deviceData
+    );
+
+    if (data.active) {
+      await fetchAttendance();
+    } else {
+      setSessionActive(false);
+    }
+  } catch (error) {
+    console.error("Automatic device detection failed:", error.message);
+  }
+}, 5000);
 
   return () => clearInterval(intervalId);
 }, [sessionActive]);

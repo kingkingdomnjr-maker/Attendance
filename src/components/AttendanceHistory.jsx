@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from "react";
-
+import API_URL from "../api";
 function AttendanceHistory() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -9,7 +9,7 @@ function AttendanceHistory() {
     async function loadHistory() {
       try {
         const token = sessionStorage.getItem("adminToken");
-        const response = await fetch("http://localhost:3001/api/attendance/history", {
+        const response = await fetch(`${API_URL}/api/attendance/history`, {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
