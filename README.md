@@ -1,4 +1,19 @@
-# React + Vite
+# Attendance System
+
+## Database setup
+
+The Express backend stores students, attendance, and sessions in PostgreSQL.
+Set `DATABASE_URL` to a hosted PostgreSQL connection string before starting the
+backend. Render deployments can set this value as a secret environment variable.
+
+The previous local database files are not imported automatically. Existing
+records were removed as requested.
+
+## Render deployment
+
+Create a PostgreSQL database with a free-tier provider, then set `DATABASE_URL`,
+`ADMIN_USERNAME`, and `ADMIN_PASSWORD` in the Render web service environment.
+The backend creates the required tables on startup.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

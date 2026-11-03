@@ -18,9 +18,7 @@ dist-ssr
 !.env.example
 !.env.*.example
 
-# Local backend data
-/backend/attendance.db
-/backend/attendance.db-*
+# Legacy local backend data
 /backend/attendance.json
 /backend/students.json
 

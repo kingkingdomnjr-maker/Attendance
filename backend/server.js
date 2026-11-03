@@ -9,7 +9,18 @@ const fs = require("fs");
 const bcrypt = require("bcryptjs");
 require("dotenv").config();
 const crypto = require("crypto");
-const db = require("./database");
+const {
+  initializeDatabase,
+  getStudents,
+  createStudent,
+  linkStudentDevice,
+  getAttendanceRecords,
+  getSessionStartedTimes,
+  getActiveSession,
+  createSession,
+  finishSession,
+  markStudentPresent,
+} = require("./database");
 
 const PORT = Number(process.env.PORT) || 3001;
 const allowedOrigins = [
@@ -22,105 +33,6 @@ const allowedOrigins = [
 
 const app = express();
 const runFile = promisify(execFile);
-const studentsFile = path.join(__dirname, "students.json");
-
-const attendanceFile = path.join(__dirname, "attendance.json");
-
-function readAttendance() {
-  return db.prepare(`
-    SELECT
-      attendance.studentId,
-      students.name,
-      students.rollNumber,
-      attendance.date,
-      attendance.sessionStartedAt,
-      attendance.status,
-      attendance.markedAt
-    FROM attendance
-    JOIN students ON students.id = attendance.studentId
-    ORDER BY attendance.id DESC
-  `).all().map((record) => ({
-    ...record,
-    sessionStartedAt: Number(record.sessionStartedAt)
-  }));
-}
-
-function saveAttendance(records) {
-  const save = db.prepare(`
-    INSERT OR IGNORE INTO attendance
-    (studentId, sessionStartedAt, date, status, markedAt)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-
-  const saveAll = db.transaction((recordList) => {
-    for (const record of recordList) {
-      save.run(
-        String(record.studentId),
-        String(record.sessionStartedAt),
-        record.date,
-        record.status,
-        record.markedAt
-      );
-    }
-  });
-
-  saveAll(records);
-}
-function markStudentPresent(student, session) {
-  const alreadyMarked = db.prepare(`
-    SELECT id
-    FROM attendance
-    WHERE studentId = ? AND sessionStartedAt = ?
-  `).get(
-    String(student.id),
-    String(session.startedAt)
-  );
-
-  if (alreadyMarked) {
-    return false;
-  }
-
-  db.prepare(`
-    INSERT INTO attendance
-    (studentId, sessionStartedAt, date, status, markedAt)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(
-    String(student.id),
-    String(session.startedAt),
-    new Date(session.startedAt).toISOString().slice(0, 10),
-    "Present",
-    new Date().toISOString()
-  );
-
-  return true;
-} 
-function readStudents() {
-  return db.prepare("SELECT * FROM students").all();
-}
-
-function saveStudents(students) {
-  const save = db.prepare(`
-    INSERT INTO students (id, name, rollNumber, macAddress)
-    VALUES (@id, @name, @rollNumber, @macAddress)
-    ON CONFLICT(id) DO UPDATE SET
-      name = excluded.name,
-      rollNumber = excluded.rollNumber,
-      macAddress = excluded.macAddress
-  `);
-
-  const saveAll = db.transaction((studentList) => {
-    for (const student of studentList) {
-      save.run({
-        id: String(student.id),
-        name: student.name,
-        rollNumber: String(student.rollNumber),
-        macAddress: student.macAddress || null
-      });
-    }
-  });
-
-  saveAll(students);
-}
 
 
 const adminUsername = process.env.ADMIN_USERNAME;
@@ -179,8 +91,8 @@ const distPath = path.join(__dirname, "..", "dist");
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 
-  app.get("/", (req, res) => {
-    res.send("backent in workin");
+  app.get(/^(?!\/api\/).*$/, (req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
   });
 }
 
@@ -244,7 +156,7 @@ app.post("/api/students/register", async (req, res) => {
       });
     }
 
-    const students = readStudents();
+    const students = await getStudents();
 
     const alreadyRegistered = students.some(
       (student) =>
@@ -280,7 +192,7 @@ app.post("/api/students/register", async (req, res) => {
       registeredAt: new Date().toISOString(),
     };
 
-    saveStudents([...students, student]);
+    await createStudent(student);
 
     return res.status(201).json({
       message: `Registration successful! Your roll number is ${rollNumber}.`,
@@ -295,9 +207,9 @@ app.post("/api/students/register", async (req, res) => {
   }
 });
 
-app.get("/api/attendance", verifyAdmin, (req, res) => {
+app.get("/api/attendance", verifyAdmin, async (req, res) => {
   try {
-    const records = readAttendance();
+    const records = await getAttendanceRecords();
     res.json({ records });
   } catch (error) {
     console.error("Could not load attendance:", error.message);
@@ -309,72 +221,72 @@ app.get("/api/attendance", verifyAdmin, (req, res) => {
 });
 
 
-app.get("/api/attendance/history", verifyAdmin, (req, res) => {
-  const sessions = db.prepare(`
-    SELECT startedAt
-    FROM sessions
-    ORDER BY startedAt DESC
-  `).all();
+app.get("/api/attendance/history", verifyAdmin, async (req, res) => {
+  try {
+    const sessionStartedTimes = await getSessionStartedTimes();
+    const records = await getAttendanceRecords();
+    const historyByDate = {};
 
-  const records = readAttendance();
+    for (const startedAt of sessionStartedTimes) {
+      const date = new Date(startedAt).toISOString().slice(0, 10);
 
-  const historyByDate = {};
+      if (!historyByDate[date]) {
+        historyByDate[date] = {};
+      }
 
-  for (const session of sessions) {
-    const startedAt = Number(session.startedAt);
-    const date = new Date(startedAt).toISOString().slice(0, 10);
-
-    if (!historyByDate[date]) {
-      historyByDate[date] = {};
-    }
-
-    historyByDate[date][String(startedAt)] = {
-      sessionStartedAt: startedAt,
-      presentStudents: [],
-    };
-  }
-
-  for (const record of records) {
-    const date = record.date;
-    const sessionKey = String(record.sessionStartedAt);
-
-    if (!historyByDate[date]) {
-      historyByDate[date] = {};
-    }
-
-    if (!historyByDate[date][sessionKey]) {
-      historyByDate[date][sessionKey] = {
-        sessionStartedAt: record.sessionStartedAt,
+      historyByDate[date][String(startedAt)] = {
+        sessionStartedAt: startedAt,
         presentStudents: [],
       };
     }
 
-    const session = historyByDate[date][sessionKey];
+    for (const record of records) {
+      const date = record.date;
+      const sessionKey = String(record.sessionStartedAt);
 
-    if (
-      !session.presentStudents.some(
-        (student) => student.studentId === record.studentId
-      )
-    ) {
-      session.presentStudents.push({
-        studentId: record.studentId,
-        name: record.name,
-        rollNumber: record.rollNumber,
-        status: record.status,
-        markedAt: record.markedAt,
-      });
+      if (!historyByDate[date]) {
+        historyByDate[date] = {};
+      }
+
+      if (!historyByDate[date][sessionKey]) {
+        historyByDate[date][sessionKey] = {
+          sessionStartedAt: record.sessionStartedAt,
+          presentStudents: [],
+        };
+      }
+
+      const session = historyByDate[date][sessionKey];
+
+      if (
+        !session.presentStudents.some(
+          (student) => student.studentId === record.studentId
+        )
+      ) {
+        session.presentStudents.push({
+          studentId: record.studentId,
+          name: record.name,
+          rollNumber: record.rollNumber,
+          status: record.status,
+          markedAt: record.markedAt,
+        });
+      }
     }
+
+    const history = Object.entries(historyByDate)
+      .map(([date, sessionsByTime]) => ({
+        date,
+        sessions: Object.values(sessionsByTime),
+        sessionCount: Object.keys(sessionsByTime).length,
+      }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    res.json({ history });
+  } catch (error) {
+    console.error("Could not load attendance history:", error.message);
+    res.status(500).json({
+      message: "Could not load attendance history.",
+    });
   }
-
-  const history = Object.entries(historyByDate)
-    .map(([date, sessionsByTime]) => ({
-      date,
-      sessions: Object.values(sessionsByTime),
-      sessionCount: Object.keys(sessionsByTime).length,
-    }))
-    .sort((a, b) => b.date.localeCompare(a.date));
-
-  res.json({ history });
 });
 
 
@@ -432,7 +344,7 @@ function getSessionStatus() {
 }
 
 // 1. Start a new attendance session.
-app.post("/api/session/start", verifyAdmin, (req, res) => {
+app.post("/api/session/start", verifyAdmin, async (req, res) => {
   const existingSession = getSessionStatus();
 
   if (existingSession) {
@@ -448,13 +360,15 @@ app.post("/api/session/start", verifyAdmin, (req, res) => {
     startedAt,
     endsAt: startedAt + SESSION_DURATION_MS,
   };
-  db.prepare(`
-  INSERT INTO sessions (startedAt, endsAt, active)
-  VALUES (?, ?, 1)
-`).run(
-  String(startedAt),
-  new Date(startedAt + SESSION_DURATION_MS).toISOString()
-);
+  try {
+    await createSession(activeSession);
+  } catch (error) {
+    activeSession = null;
+    console.error("Could not persist attendance session:", error.message);
+    return res.status(500).json({
+      message: "Could not start attendance session.",
+    });
+  }
 
   res.status(201).json({
     message: "Attendance session started.",
@@ -525,7 +439,7 @@ app.get("/api/session", (req, res) => {
 
 
 // 3. Stop the session manually.
-app.post("/api/session/stop", verifyAdmin, (req, res) => {
+app.post("/api/session/stop", verifyAdmin, async (req, res) => {
   if (!getSessionStatus()) {
     return res.json({
       message: "No active session.",
@@ -533,12 +447,22 @@ app.post("/api/session/stop", verifyAdmin, (req, res) => {
     });
   }
 
+  const stoppedSession = activeSession;
   activeSession = null;
 
-  res.json({
-    message: "Attendance session stopped.",
-    active: false,
-  });
+  try {
+    await finishSession(stoppedSession.startedAt);
+    res.json({
+      message: "Attendance session stopped.",
+      active: false,
+    });
+  } catch (error) {
+    activeSession = stoppedSession;
+    console.error("Could not persist session stop:", error.message);
+    res.status(500).json({
+      message: "Could not stop attendance session.",
+    });
+  }
 });
 
 // 4. Detect hotspot devices ONLY during an active session.
@@ -581,7 +505,7 @@ app.get("/api/devices", verifyAdmin, async (req, res) => {
 const data = JSON.parse(stdout.trim());
 
 // Load registered students
-const students = readStudents();
+const students = await getStudents();
 const markedStudents = [];
 
 // Check each connected hotspot device
@@ -601,7 +525,7 @@ for (const client of data.clients || []) {
 
   // Mark the student present if linked
   if (student) {
-    const wasMarked = markStudentPresent(student, session);
+    const wasMarked = await markStudentPresent(student, session);
 
     
     if (wasMarked) {
@@ -630,9 +554,9 @@ res.json({
     });
   }
 });
-app.get("/api/students", verifyAdmin, (req, res) => {
+app.get("/api/students", verifyAdmin, async (req, res) => {
   try {
-    const students = readStudents();
+    const students = await getStudents();
     res.json({ students });
   } catch (error) {
     console.error("Could not load students:", error.message);
@@ -643,7 +567,7 @@ app.get("/api/students", verifyAdmin, (req, res) => {
   }
 });
 
-app.post("/api/students/link-device", verifyAdmin, (req, res) => {
+app.post("/api/students/link-device", verifyAdmin, async (req, res) => {
   const { studentId, macAddress } = req.body;
 
   if (!studentId || !macAddress) {
@@ -653,38 +577,26 @@ app.post("/api/students/link-device", verifyAdmin, (req, res) => {
   }
 
   try {
-    const students = readStudents();
-
-    const student = students.find(
-      (item) => item.id === studentId
+    const result = await linkStudentDevice(
+      studentId,
+      macAddress.trim().toLowerCase()
     );
 
-    if (!student) {
+    if (result.status === "not_found") {
       return res.status(404).json({
         message: "Student not found.",
       });
     }
 
-    const existingStudent = students.find(
-      (item) =>
-        item.macAddress &&
-        item.macAddress.toLowerCase() === macAddress.toLowerCase() &&
-        item.id !== studentId
-    );
-
-    if (existingStudent) {
+    if (result.status === "conflict") {
       return res.status(409).json({
         message: "This device is already linked to another student.",
       });
     }
 
-    student.macAddress = macAddress.toLowerCase();
-
-    saveStudents(students);
-
     return res.json({
-      message: `Device linked successfully to ${student.name}.`,
-      student,
+      message: `Device linked successfully to ${result.student.name}.`,
+      student: result.student,
     });
   } catch (error) {
     console.error("Error linking device:", error);
@@ -696,8 +608,18 @@ app.post("/api/students/link-device", verifyAdmin, (req, res) => {
 });
 
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(
-    `Attendance backend running at http://localhost:${PORT}`
-  );
+async function startServer() {
+  await initializeDatabase();
+  activeSession = await getActiveSession();
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(
+      `Attendance backend running at http://localhost:${PORT}`
+    );
+  });
+}
+
+startServer().catch((error) => {
+  console.error("Could not start the attendance server:", error.message);
+  process.exitCode = 1;
 });
