@@ -10,10 +10,25 @@ The backend also requires `ADMIN_USERNAME` and `ADMIN_PASSWORD`; use
 
 ## Local development
 
-Vite reads frontend variables from the repository root, not from `backend/.env`.
-Copy [`.env.example`](./.env.example) to `.env` for local development; the API
-defaults to Express at `http://localhost:3001`. Start the frontend and backend
-in separate terminals with `npm run dev` and `npm --prefix backend start`.
+To use the deployed service, open the public URL shown in the Render dashboard.
+Do not use `localhost` for the public site.
+
+To run only the frontend locally against the deployed API, create a
+`.env.local` file in the repository root (next to `package.json`) containing:
+
+```env
+VITE_API_URL=https://your-render-service.onrender.com
+```
+
+Replace the example host with the exact public URL from Render, then restart
+Vite with `npm run dev`. This setting belongs in the repository root; Vite does
+not read it from `backend/.env`.
+
+To run the backend locally, set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and
+`DATABASE_URL` in `backend/.env`. Use the database's external connection URL
+from your computer. An internal Render database URL only resolves from services
+inside Render. Start the frontend and backend in separate terminals with
+`npm run dev` and `npm --prefix backend start`.
 
 The previous local database files are not imported automatically. Existing
 records were removed as requested.
@@ -22,7 +37,11 @@ records were removed as requested.
 
 Create a PostgreSQL database with a free-tier provider, then set `DATABASE_URL`,
 `ADMIN_USERNAME`, and `ADMIN_PASSWORD` in the Render web service environment.
-The backend creates the required tables on startup.
+The backend creates the required tables on startup. If using a Render database's
+internal connection URL, keep the database and web service in the same region.
+After pushing changes to `main`, wait for the Render deploy to finish and open
+the public service URL. `/api/health` should return `{"status":"ok"}` when the
+service can connect to PostgreSQL.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

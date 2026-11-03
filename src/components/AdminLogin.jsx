@@ -36,9 +36,11 @@ function AdminLogin({ onLoginSuccess }) {
     } catch (error) {
       setError(
         error instanceof TypeError
-          ? `Could not reach the API at ${
-              API_URL || window.location.origin
-            }. Make sure the backend is running and the URL is correct.`
+          ? import.meta.env.DEV && !import.meta.env.VITE_API_URL
+            ? "This is the local development site, but its API is not running. Open your Render site, or set VITE_API_URL in the repository-root .env.local to your Render service URL."
+            : `Could not reach the API at ${
+                API_URL || window.location.origin
+              }. Check the Render deployment and its service logs.`
           : error.message || "Could not connect to the backend."
       );
     } finally {
