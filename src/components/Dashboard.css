@@ -1,0 +1,126 @@
+
+/* Main dashboard */
+.studentcard {
+  min-height: 100vh;
+  padding: 28px;
+  background: #f3f4f6;
+  color: #171717;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.studentcard h1 {
+  margin: 10px 0;
+  font-size: 30px;
+}
+
+.studentcard h2 {
+  color: #171717;
+}
+.studentcard h3 {
+  margin: 0 0 10px;
+  color: #737373;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Attendance session */
+.studentcard section {
+  margin-top: 28px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+}
+
+.studentcard button {
+  padding: 12px 20px;
+  margin: 10px 10px 10px 0;
+  border: none;
+  border-radius: 8px;
+  background: #171717;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.studentcard button:hover {
+  background: #535353;
+}
+
+.studentcard button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Summary cards */
+.summary-container {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.summary-card {
+  padding: 22px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.summary-card h3 {
+  margin: 0 0 12px;
+  color: #737373;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.summary-card p {
+  margin: 0;
+  color: #171717;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+/* Registered students */
+.student-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.student-card {
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.student-card h3 {
+  margin: 0 0 10px;
+  color: #020202;
+}
+
+.student-card p {
+  margin: 6px 0;
+  color: #404040;
+  font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .summary-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 500px) {
+  .studentcard {
+    padding: 16px;
+  }
+
+  .summary-container {
+    grid-template-columns: 1fr;
+  }
+}

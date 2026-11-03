@@ -1,0 +1,50 @@
+
+.students-page {
+  min-height: 100vh;
+  padding: 28px;
+  background: #f3f4f6;
+  color: #171717;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.students-page h1 {
+  margin: 0 0 24px;
+  font-size: 28px;
+  color: #171717;
+}
+
+.students-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.student-item {
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  color: #171717;
+  font-size: 15px;
+}
+
+.students-message {
+  color: #737373;
+  font-size: 14px;
+}
+
+.students-error {
+  color: #a52323;
+  background: #fff0f0;
+  border: 1px solid #f5caca;
+  padding: 12px;
+  border-radius: 9px;
+}
+
+@media (max-width: 500px) {
+  .students-page {
+    padding: 16px;
+  }
+}

@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import API_URL from "../api";
+import "./AdminLogin.css";
 
 function AdminLogin({ onLoginSuccess }) {
   const [username, setUsername] = useState("");
@@ -40,41 +41,67 @@ function AdminLogin({ onLoginSuccess }) {
   }
 
   return (
-    <div>
-      <h2>Admin Login</h2>
+    <div className="login-page">
+      <div className="login-background"></div>
 
-      <form onSubmit={handleLogin}>
-        <div>
-          <label htmlFor="username">Username</label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            required
-          />
+      <div className="login-card">
+        <div className="login-logo">
+          <span>SDC</span>
         </div>
 
-        <div>
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </div>
+        <p className="login-tag">ADMINISTRATOR PORTAL</p>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
+        <h1>Welcome back</h1>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+        <p className="login-description">
+          Sign in to manage attendance and student records.
+        </p>
+
+        <form onSubmit={handleLogin}>
+          <div className="login-field">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+            />
+          </div>
+
+          <div className="login-field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </div>
+
+          {error && (
+            <p className="login-error">{error}</p>
+          )}
+
+          <button
+            className="login-button"
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Sign in"}
+            <span>→</span>
+          </button>
+        </form>
+
+        <p className="login-footer">
+          Skill Development Club · CUCEK
+        </p>
+      </div>
     </div>
   );
 }
 
 export default AdminLogin;
- 

@@ -1,0 +1,149 @@
+
+/* Main attendance history page */
+.history-page {
+  min-height: 100vh;
+  padding: 24px;
+  background: #f3f4f6;
+  color: #171717;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.history-page h1 {
+  margin: 0 0 20px;
+  font-size: 25px;
+}
+
+/* Date header */
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.history-header h1 {
+  margin: 0;
+}
+
+/* Date picker */
+.history-header input[type="date"] {
+  padding: 10px 14px;
+  border: 1px solid #d4d4d4;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #171717;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.history-header input[type="date"]:hover {
+  border-color: #a3a3a3;
+}
+
+.history-header input[type="date"]:focus {
+  border-color: #171717;
+  box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.08);
+}
+
+/* Calendar icon */
+.history-header input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 5px;
+  transition: background 0.2s;
+}
+
+.history-header input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background: #eeeeee;
+}
+
+/* Date sections */
+.history-day {
+  margin-bottom: 20px;
+  scroll-margin-top: 20px;
+}
+
+.history-day h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* Session cards */
+.history-session {
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.history-session h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Session heading */
+.session-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Total present count */
+.session-present-count {
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Student records */
+.history-student {
+  padding: 8px 0;
+  border-bottom: 1px solid #eeeeee;
+  color: #555555;
+  font-size: 13px;
+}
+
+.history-student:last-child {
+  border-bottom: none;
+}
+
+/* Messages */
+.history-message {
+  color: #737373;
+  font-size: 13px;
+}
+
+/* Error messages */
+.history-error {
+  color: #a52323;
+  font-size: 13px;
+}
+
+/* Mobile responsive layout */
+@media (max-width: 500px) {
+  .history-page {
+    padding: 16px;
+  }
+
+  .history-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .session-heading {
+    flex-wrap: wrap;
+  }
+}

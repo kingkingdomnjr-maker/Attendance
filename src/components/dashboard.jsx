@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import API_URL from "../api";
+import "./Dashboard.css";
 
 function Dashboard() {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -194,9 +195,8 @@ function Dashboard() {
 const absentStudents = 0;
   return (
     <div className="studentcard">
-      <Link to="/students">Students</Link>
 
-      <h2>SKILL Development Club</h2>
+      <h3>SkillDevelopmentClub</h3>
       <h1>Attendance System</h1>
 
       <section>

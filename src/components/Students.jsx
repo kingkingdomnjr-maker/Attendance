@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from "react";
 import API_URL from "../api";
+import "./Students.css";
 
 function Students() {
   const [students, setStudents] = useState([]);
@@ -41,21 +42,23 @@ function Students() {
     return <p>Error: {error}</p>;
   }
 
-  return (
-    <div>
-      <h1>Registered Students</h1>
+ return (
+  <div className="students-page">
+    <h1>Registered Students</h1>
 
-      {students.length === 0 ? (
-        <p>No registered students found.</p>
-      ) : (
-        students.map((student) => (
-          <p key={student.id}>
-            {student.name} — Roll No: {student.rollNumber}
-          </p>
-        ))
-      )}
-    </div>
-  );
-}
+    {students.length === 0 ? (
+      <p className="students-message">No registered students found.</p>
+    ) : (
+      <div className="students-list">
+        {students.map((student) => (
+          <div className="student-item" key={student.id}>
+            <h3>{student.name}</h3>
+            <p>Roll No: {student.rollNumber}</p>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+); }
 
 export default Students;
