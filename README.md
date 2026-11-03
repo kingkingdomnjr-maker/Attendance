@@ -5,6 +5,15 @@
 The Express backend stores students, attendance, and sessions in PostgreSQL.
 Set `DATABASE_URL` to a hosted PostgreSQL connection string before starting the
 backend. Render deployments can set this value as a secret environment variable.
+The backend also requires `ADMIN_USERNAME` and `ADMIN_PASSWORD`; use
+[backend/.env.example](./backend/.env.example) as a template for local setup.
+
+## Local development
+
+Vite reads frontend variables from the repository root, not from `backend/.env`.
+Copy [`.env.example`](./.env.example) to `.env` for local development; the API
+defaults to Express at `http://localhost:3001`. Start the frontend and backend
+in separate terminals with `npm run dev` and `npm --prefix backend start`.
 
 The previous local database files are not imported automatically. Existing
 records were removed as requested.

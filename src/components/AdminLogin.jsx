@@ -34,7 +34,13 @@ function AdminLogin({ onLoginSuccess }) {
 
       onLoginSuccess(data.token);
     } catch (error) {
-      setError(error.message || "Could not connect to the backend.");
+      setError(
+        error instanceof TypeError
+          ? `Could not reach the API at ${
+              API_URL || window.location.origin
+            }. Make sure the backend is running and the URL is correct.`
+          : error.message || "Could not connect to the backend."
+      );
     } finally {
       setLoading(false);
     }
