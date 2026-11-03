@@ -106,7 +106,6 @@ app.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
   });
 });
 
-
 app.post("/api/students/register", async (req, res) => {
   const session = getSessionStatus();
 
