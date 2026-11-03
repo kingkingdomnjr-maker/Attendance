@@ -149,6 +149,8 @@ function verifyAdmin(req, res, next) {
 const SESSION_DURATION_MS = 2 * 60 * 60 * 1000;
 
 let activeSession = null;
+let latestDetectedDevices = [];
+let lastDeviceUpdate = 0;
 
 app.use(
   cors({
@@ -186,40 +188,28 @@ app.post("/api/students/register", async (req, res) => {
   }
 
   try {
-    // Detect devices connected to the admin's hotspot.
-    const scriptPath = path.join(__dirname, "detect-devices.ps1");
+    // Validate the selected device using the latest list received from the admin dashboard.
+const selectedMac = macAddress.trim().toLowerCase();
 
-    const { stdout } = await runFile(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        scriptPath,
-      ],
-      {
-        timeout: 15000,
-        windowsHide: true,
-        maxBuffer: 1024 * 1024,
-      }
-    );
+const isFresh = Date.now() - lastDeviceUpdate < 15000;
 
-    const data = JSON.parse(stdout.trim());
-    const selectedMac = macAddress.trim().toLowerCase();
+if (!isFresh) {
+  return res.status(503).json({
+    message: "Device list is not available. Please try again.",
+  });
+}
 
-    const deviceIsConnected = (data.clients || []).some(
-      (client) =>
-        client.macAddress &&
-        client.macAddress.trim().toLowerCase() === selectedMac
-    );
+const deviceIsConnected = latestDetectedDevices.some(
+  (client) =>
+    client.macAddress &&
+    client.macAddress.trim().toLowerCase() === selectedMac
+);
 
-    if (!deviceIsConnected) {
-      return res.status(400).json({
-        message: "Selected phone is not connected to the admin's hotspot. Refresh the device list.",
-      });
-    }
+if (!deviceIsConnected) {
+  return res.status(400).json({
+    message: "Selected phone is not connected to the admin's hotspot. Refresh the device list.",
+  });
+}
 
     const students = readStudents();
 
@@ -268,6 +258,20 @@ app.post("/api/students/register", async (req, res) => {
 
     return res.status(500).json({
       message: "Could not complete registration.",
+    });
+  }
+});
+// Get all registered students
+app.get("/api/students", verifyAdmin, (req, res) => {
+  try {
+    const students = readStudents();
+
+    res.json({ students });
+  } catch (error) {
+    console.error("Could not load students:", error.message);
+
+    res.status(500).json({
+      message: "Could not load students.",
     });
   }
 });
@@ -441,51 +445,7 @@ app.post("/api/session/start", verifyAdmin, (req, res) => {
     session: activeSession,
   });
 });
-app.get("/api/registration/devices", async (req, res) => {
-  const session = getSessionStatus();
 
-  if (!session) {
-    return res.status(403).json({
-      message: "Start an attendance session first.",
-    });
-  }
-
-  try {
-    const scriptPath = path.join(__dirname, "detect-devices.ps1");
-
-    const { stdout } = await runFile(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        scriptPath,
-      ],
-      {
-        timeout: 15000,
-        windowsHide: true,
-        maxBuffer: 1024 * 1024,
-      }
-    );
-
-    const data = JSON.parse(stdout.trim());
-
-    res.json({
-      clients: data.clients || [],
-    });
-  } catch (error) {
-    console.error(
-      "Registration device detection failed:",
-      error.message
-    );
-
-    res.status(500).json({
-      message: "Could not detect hotspot devices.",
-    });
-  }
-});
 // 2. Check the current session.
 app.get("/api/session", (req, res) => {
   const session = getSessionStatus();
@@ -549,6 +509,8 @@ app.post("/api/devices", verifyAdmin, async (req, res) => {
         error: "Invalid device data received.",
       });
     }
+    latestDetectedDevices = data.clients;
+lastDeviceUpdate = Date.now();
 
     // Load registered students
     const students = readStudents();
@@ -596,19 +558,25 @@ app.post("/api/devices", verifyAdmin, async (req, res) => {
     });
   }
 });
-app.get("/api/students", verifyAdmin, (req, res) => {
-  try {
-    const students = readStudents();
-    res.json({ students });
-  } catch (error) {
-    console.error("Could not load students:", error.message);
+app.get("/api/registration/devices", (req, res) => {
+  const session = getSessionStatus();
 
-    res.status(500).json({
-      message: "Could not load registered students.",
+  if (!session) {
+    return res.status(403).json({
+      message: "Start an attendance session first.",
     });
   }
-});
 
+  const isFresh = Date.now() - lastDeviceUpdate < 15000;
+
+  if (!isFresh) {
+    return res.json({ clients: [] });
+  }
+
+  return res.json({
+    clients: latestDetectedDevices,
+  });
+});
 app.post("/api/students/link-device", verifyAdmin, (req, res) => {
   const { studentId, macAddress } = req.body;
 

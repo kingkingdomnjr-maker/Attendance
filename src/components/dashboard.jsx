@@ -160,7 +160,7 @@ function Dashboard() {
       "POST",
       deviceData
     );
-
+    
     if (data.active) {
       await fetchAttendance();
     } else {

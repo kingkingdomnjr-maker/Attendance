@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import "./StudentRegister.css";
 import { Link } from "react-router-dom";
-
-const API_URL = "http://192.168.137.1:3001";
+import API_URL from "../api";
 
 function StudentRegister() {
   const [name, setName] = useState("");
