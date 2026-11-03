@@ -41,6 +41,10 @@ async function initializeDatabase() {
   `);
 }
 
+async function checkDatabase() {
+  await pool.query("SELECT 1");
+}
+
 async function getStudents() {
   const { rows } = await pool.query(`
     SELECT id, name, "rollNumber", "macAddress", "registeredAt"
@@ -172,6 +176,7 @@ async function markStudentPresent(student, session) {
 
 module.exports = {
   initializeDatabase,
+  checkDatabase,
   getStudents,
   createStudent,
   linkStudentDevice,

@@ -11,6 +11,7 @@ require("dotenv").config();
 const crypto = require("crypto");
 const {
   initializeDatabase,
+  checkDatabase,
   getStudents,
   createStudent,
   linkStudentDevice,
@@ -85,6 +86,16 @@ app.use(
 );
 
 app.use(express.json());
+
+app.get("/api/health", async (req, res) => {
+  try {
+    await checkDatabase();
+    res.json({ status: "ok" });
+  } catch (error) {
+    console.error("Database health check failed:", error.message);
+    res.status(503).json({ status: "unavailable" });
+  }
+});
 
 const distPath = path.join(__dirname, "..", "dist");
 const indexPath = path.join(distPath, "index.html");
