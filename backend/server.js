@@ -87,15 +87,24 @@ app.use(
 app.use(express.json());
 
 const distPath = path.join(__dirname, "..", "dist");
+const indexPath = path.join(distPath, "index.html");
 
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+app.use(express.static(distPath));
 
-  app.get(/^(?!\/api\/).*$/, (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
+app.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
+  if (!fs.existsSync(indexPath)) {
+    console.error("Frontend build is missing:", indexPath);
+    return res.status(503).type("text").send(
+      "The app frontend is not built. Check the Render build command."
+    );
+  }
+
+  res.sendFile(indexPath, (error) => {
+    if (error) {
+      next(error);
+    }
   });
-}
-
+});
 
 
 app.post("/api/students/register", async (req, res) => {

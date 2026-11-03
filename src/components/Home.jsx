@@ -1,9 +1,8 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import API_URL from "../api";
 import "./Home.css";
-
-const API_URL = "http://192.168.137.1:3001";
 
 function Home() {
   const [sessionActive, setSessionActive] = useState(false);
