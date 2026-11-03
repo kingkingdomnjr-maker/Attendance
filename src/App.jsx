@@ -1,6 +1,12 @@
-﻿import "./App.css";
+import "./App.css";
 import { useState } from "react";
-import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  NavLink,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 
 import Dashboard from "./components/dashboard";
 import Students from "./components/Students";
@@ -32,9 +38,13 @@ function App() {
     return (
       <div className="app-layout">
         <aside className="sidebar">
-          <h2 className="sidebar-title">SKILL Development Club</h2>
-          <p className="sidebar-subtitle">Attendance System</p>
+          <h2 className="sidebar-title">
+            SKILL Development Club
+          </h2>
 
+          <p className="sidebar-subtitle">
+            Attendance System
+          </p>
           <NavLink to="/" end className="sidebar-link">
             Home
           </NavLink>
@@ -53,19 +63,27 @@ function App() {
             </NavLink>
           </nav>
 
-          <button className="logout-button" onClick={handleLogout}>
+          <button
+            className="logout-button"
+            onClick={handleLogout}
+          >
             Admin Logout
           </button>
         </aside>
 
-        <main className="main-content">{children}</main>
+        <main className="main-content">
+          {children}
+        </main>
       </div>
     );
   }
 
   return (
     <Routes>
-      <Route path="/register" element={<StudentRegister />} />
+      <Route
+        path="/register"
+        element={<StudentRegister />}
+      />
 
       <Route
         path="/login"
@@ -73,13 +91,14 @@ function App() {
           token ? (
             <Navigate to="/dashboard" replace />
           ) : (
-            <AdminLogin onLoginSuccess={handleLoginSuccess} />
+            <AdminLogin
+              onLoginSuccess={handleLoginSuccess}
+            />
           )
         }
       />
 
       <Route path="/" element={<Home />} />
-
       <Route
         path="/students"
         element={
@@ -92,19 +111,18 @@ function App() {
           )
         }
       />
-
       <Route
-        path="/dashboard"
-        element={
-          token ? (
-            <AdminLayout>
-              <Dashboard />
-            </AdminLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
+  path="/dashboard"
+  element={
+    token ? (
+      <AdminLayout>
+        <Dashboard />
+      </AdminLayout>
+    ) : (
+      <Navigate to="/login" replace />
+    )
+  }
+/>
 
       <Route
         path="/history"

@@ -16,7 +16,7 @@ function Dashboard() {
       const token = sessionStorage.getItem("adminToken");
       const response = await fetch(`${API_URL}/api/attendance`, {
         headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(token ? { Authorization: "Bearer " + token } : {}),
         },
       });
 
@@ -54,7 +54,7 @@ function Dashboard() {
   const response = await fetch(`${API_URL}${endpoint}`, {
     method,
     headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token ? { Authorization: "Bearer " + token } : {}),
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),

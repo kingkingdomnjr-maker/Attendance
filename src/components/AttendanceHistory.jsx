@@ -30,7 +30,7 @@ function AttendanceHistory() {
         const token = sessionStorage.getItem("adminToken");
         const response = await fetch(`${API_URL}/api/attendance/history`, {
           headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(token ? { Authorization: "Bearer " + token } : {}),
           },
         });
 

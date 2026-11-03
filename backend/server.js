@@ -7,10 +7,18 @@ const { promisify } = require("util");
 const fs = require("fs");
 
 const bcrypt = require("bcryptjs");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
+require("dotenv").config();
 const crypto = require("crypto");
 const db = require("./database");
 
+const PORT = Number(process.env.PORT) || 3001;
+const allowedOrigins = [
+  /^https:\/\/.*\.onrender\.com$/,
+  /^https:\/\/.*\.vercel\.app$/,
+  /^http:\/\/localhost:517[3-9]$/,
+  /^http:\/\/192\.168\.137\.1:517[3-9]$/,
+  /^http:\/\/localhost:3000$/,
+];
 
 const app = express();
 const runFile = promisify(execFile);
@@ -149,20 +157,33 @@ function verifyAdmin(req, res, next) {
 const SESSION_DURATION_MS = 2 * 60 * 60 * 1000;
 
 let activeSession = null;
-let latestDetectedDevices = [];
-let lastDeviceUpdate = 0;
 
 app.use(
   cors({
-    origin: [
-      /^http:\/\/localhost:517[3-9]$/,
-      /^http:\/\/192\.168\.137\.1:517[3-9]$/,
-      process.env.FRONTEND_URL,
-    ].filter(Boolean),
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.some((pattern) => pattern.test(origin))) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
   })
 );
 
 app.use(express.json());
+
+const distPath = path.join(__dirname, "..", "dist");
+
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+
+  app.get(/^(?!\/api\/).*$/, (req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
+
 
 
 app.post("/api/students/register", async (req, res) => {
@@ -188,28 +209,40 @@ app.post("/api/students/register", async (req, res) => {
   }
 
   try {
-    // Validate the selected device using the latest list received from the admin dashboard.
-const selectedMac = macAddress.trim().toLowerCase();
+    // Detect devices connected to the admin's hotspot.
+    const scriptPath = path.join(__dirname, "detect-devices.ps1");
 
-const isFresh = Date.now() - lastDeviceUpdate < 15000;
+    const { stdout } = await runFile(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        scriptPath,
+      ],
+      {
+        timeout: 15000,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024,
+      }
+    );
 
-if (!isFresh) {
-  return res.status(503).json({
-    message: "Device list is not available. Please try again.",
-  });
-}
+    const data = JSON.parse(stdout.trim());
+    const selectedMac = macAddress.trim().toLowerCase();
 
-const deviceIsConnected = latestDetectedDevices.some(
-  (client) =>
-    client.macAddress &&
-    client.macAddress.trim().toLowerCase() === selectedMac
-);
+    const deviceIsConnected = (data.clients || []).some(
+      (client) =>
+        client.macAddress &&
+        client.macAddress.trim().toLowerCase() === selectedMac
+    );
 
-if (!deviceIsConnected) {
-  return res.status(400).json({
-    message: "Selected phone is not connected to the admin's hotspot. Refresh the device list.",
-  });
-}
+    if (!deviceIsConnected) {
+      return res.status(400).json({
+        message: "Selected phone is not connected to the admin's hotspot. Refresh the device list.",
+      });
+    }
 
     const students = readStudents();
 
@@ -258,20 +291,6 @@ if (!deviceIsConnected) {
 
     return res.status(500).json({
       message: "Could not complete registration.",
-    });
-  }
-});
-// Get all registered students
-app.get("/api/students", verifyAdmin, (req, res) => {
-  try {
-    const students = readStudents();
-
-    res.json({ students });
-  } catch (error) {
-    console.error("Could not load students:", error.message);
-
-    res.status(500).json({
-      message: "Could not load students.",
     });
   }
 });
@@ -402,13 +421,10 @@ app.post("/api/admin/login", async (req, res) => {
 });
 
 function getSessionStatus() {
-  if (activeSession && Date.now() >= activeSession.endsAt) {
-    db.prepare(`
-      UPDATE sessions
-      SET active = 0
-      WHERE startedAt = ?
-    `).run(String(activeSession.startedAt));
-
+  if (
+    activeSession &&
+    Date.now() >= activeSession.endsAt
+  ) {
     activeSession = null;
   }
 
@@ -445,7 +461,51 @@ app.post("/api/session/start", verifyAdmin, (req, res) => {
     session: activeSession,
   });
 });
+app.get("/api/registration/devices", async (req, res) => {
+  const session = getSessionStatus();
 
+  if (!session) {
+    return res.status(403).json({
+      message: "Start an attendance session first.",
+    });
+  }
+
+  try {
+    const scriptPath = path.join(__dirname, "detect-devices.ps1");
+
+    const { stdout } = await runFile(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        scriptPath,
+      ],
+      {
+        timeout: 15000,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024,
+      }
+    );
+
+    const data = JSON.parse(stdout.trim());
+
+    res.json({
+      clients: data.clients || [],
+    });
+  } catch (error) {
+    console.error(
+      "Registration device detection failed:",
+      error.message
+    );
+
+    res.status(500).json({
+      message: "Could not detect hotspot devices.",
+    });
+  }
+});
 // 2. Check the current session.
 app.get("/api/session", (req, res) => {
   const session = getSessionStatus();
@@ -466,20 +526,12 @@ app.get("/api/session", (req, res) => {
 
 // 3. Stop the session manually.
 app.post("/api/session/stop", verifyAdmin, (req, res) => {
-  const session = getSessionStatus();
-
-  if (!session) {
+  if (!getSessionStatus()) {
     return res.json({
       message: "No active session.",
       active: false,
     });
   }
-
-  db.prepare(`
-    UPDATE sessions
-    SET active = 0
-    WHERE startedAt = ?
-  `).run(String(session.startedAt));
 
   activeSession = null;
 
@@ -488,8 +540,9 @@ app.post("/api/session/stop", verifyAdmin, (req, res) => {
     active: false,
   });
 });
+
 // 4. Detect hotspot devices ONLY during an active session.
-app.post("/api/devices", verifyAdmin, async (req, res) => {
+app.get("/api/devices", verifyAdmin, async (req, res) => {
   const session = getSessionStatus();
 
   if (!session) {
@@ -502,81 +555,94 @@ app.post("/api/devices", verifyAdmin, async (req, res) => {
   }
 
   try {
-    const data = req.body;
+    const scriptPath = path.join(
+      __dirname,
+      "detect-devices.ps1"
+    );
 
-    if (!Array.isArray(data.clients)) {
-      return res.status(400).json({
-        error: "Invalid device data received.",
+    const { stdout } = await runFile(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        scriptPath,
+      ],
+      {
+        timeout: 15000,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024,
+      }
+    );
+
+    
+const data = JSON.parse(stdout.trim());
+
+// Load registered students
+const students = readStudents();
+const markedStudents = [];
+
+// Check each connected hotspot device
+for (const client of data.clients || []) {
+  if (!client.macAddress) {
+    continue;
+  }
+
+  const deviceMac = client.macAddress.trim().toLowerCase();
+
+  // Find the student linked to this device
+  const student = students.find(
+    (item) =>
+      item.macAddress &&
+      item.macAddress.trim().toLowerCase() === deviceMac
+  );
+
+  // Mark the student present if linked
+  if (student) {
+    const wasMarked = markStudentPresent(student, session);
+
+    
+    if (wasMarked) {
+      markedStudents.push({
+        name: student.name,
+        rollNumber: student.rollNumber,
       });
     }
-    latestDetectedDevices = data.clients;
-lastDeviceUpdate = Date.now();
+  }
+}
 
-    // Load registered students
-    const students = readStudents();
-    const markedStudents = [];
-
-    // Check each connected hotspot device
-    for (const client of data.clients) {
-      if (!client.macAddress) {
-        continue;
-      }
-
-      const deviceMac = client.macAddress.trim().toLowerCase();
-
-      // Find the student linked to this device
-      const student = students.find(
-        (item) =>
-          item.macAddress &&
-          item.macAddress.trim().toLowerCase() === deviceMac
-      );
-
-      // Mark the student present if linked
-      if (student) {
-        const wasMarked = markStudentPresent(student, session);
-
-        if (wasMarked) {
-          markedStudents.push({
-            name: student.name,
-            rollNumber: student.rollNumber,
-          });
-        }
-      }
-    }
-
-    res.json({
-      active: true,
-      ...data,
-      markedStudents,
-    });
+res.json({
+  active: true,
+  ...data,
+  markedStudents,
+});
   } catch (error) {
-    console.error("Device processing failed:", error.message);
+    console.error(
+      "Device detection failed:",
+      error.message
+    );
 
     res.status(500).json({
-      error: "Could not process hotspot clients.",
+      error: "Could not retrieve hotspot clients.",
       details: error.message,
     });
   }
 });
-app.get("/api/registration/devices", (req, res) => {
-  const session = getSessionStatus();
+app.get("/api/students", verifyAdmin, (req, res) => {
+  try {
+    const students = readStudents();
+    res.json({ students });
+  } catch (error) {
+    console.error("Could not load students:", error.message);
 
-  if (!session) {
-    return res.status(403).json({
-      message: "Start an attendance session first.",
+    res.status(500).json({
+      message: "Could not load registered students.",
     });
   }
-
-  const isFresh = Date.now() - lastDeviceUpdate < 15000;
-
-  if (!isFresh) {
-    return res.json({ clients: [] });
-  }
-
-  return res.json({
-    clients: latestDetectedDevices,
-  });
 });
+
 app.post("/api/students/link-device", verifyAdmin, (req, res) => {
   const { studentId, macAddress } = req.body;
 
@@ -630,8 +696,8 @@ app.post("/api/students/link-device", verifyAdmin, (req, res) => {
 });
 
 
-const PORT = process.env.PORT || 3001;
-
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Attendance backend running on port ${PORT}`);
+  console.log(
+    `Attendance backend running at http://localhost:${PORT}`
+  );
 });

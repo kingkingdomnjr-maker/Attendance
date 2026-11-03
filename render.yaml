@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: attendance-admin
+    env: node
+    rootDir: .
+    plan: free
+    buildCommand: npm install && npm install --prefix backend
+    startCommand: npm run build && node backend/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
