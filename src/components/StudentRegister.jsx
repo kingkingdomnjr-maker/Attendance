@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./StudentRegister.css";
 import { Link } from "react-router-dom";
 import API_URL from "../api";
@@ -14,11 +14,15 @@ function StudentRegister() {
   const [loading, setLoading] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [sessionUnavailable, setSessionUnavailable] = useState(false);
+  const sessionUnavailableRef = useRef(false);
 
-  async function loadDevices() {
-    setDetecting(true);
-    setError("");
-    setSessionUnavailable(false);
+  async function loadDevices(showLoading = true) {
+    if (showLoading) {
+      setDetecting(true);
+      setError("");
+      setSessionUnavailable(false);
+      sessionUnavailableRef.current = false;
+    }
 
     try {
       const response = await fetch(
@@ -28,9 +32,16 @@ function StudentRegister() {
 
       if (!response.ok) {
         if (response.status === 403) {
+          sessionUnavailableRef.current = true;
           setSessionUnavailable(true);
         }
         throw new Error(data.message || "Could not load devices.");
+      }
+
+      if (sessionUnavailableRef.current) {
+        sessionUnavailableRef.current = false;
+        setSessionUnavailable(false);
+        setError("");
       }
 
       setDevices(data.clients || []);
@@ -45,12 +56,16 @@ function StudentRegister() {
       setError(err.message || "Could not connect to the backend.");
       setDevices([]);
     } finally {
-      setDetecting(false);
+      if (showLoading) {
+        setDetecting(false);
+      }
     }
   }
 
   useEffect(() => {
     loadDevices();
+    const intervalId = setInterval(() => loadDevices(false), 5000);
+    return () => clearInterval(intervalId);
   }, []);
 
   async function handleRegister(event) {

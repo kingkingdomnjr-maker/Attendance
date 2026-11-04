@@ -28,12 +28,25 @@ To run the backend locally, set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and
 `DATABASE_URL` in `backend/.env`. Use the database's external connection URL
 from your computer. An internal Render database URL only resolves from services
 inside Render. Start the frontend and backend in separate terminals with
-`npm run dev` and `npm --prefix backend start`. On the Windows computer hosting
-the hotspot, also start the local device detection service with
-`node backend/local-agent.js`. Keep it running while an attendance session is
-active; it scans the hotspot and sends the results through the admin dashboard
-to the backend. The hosted backend cannot scan the admin computer's hotspot
-directly.
+`npm run dev` and `npm --prefix backend start`.
+
+### One-time Windows hotspot scanner setup
+
+On each Windows laptop that may host the hotspot, install Node.js LTS and keep
+this project folder on that laptop. Open PowerShell in the project folder and
+run:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File backend\install-device-agent.ps1
+```
+
+The setup installs the scanner dependencies and registers it to start whenever
+you sign in to Windows. It also starts the scanner immediately. After this
+one-time setup, keep Mobile hotspot enabled, open the admin dashboard on the
+same laptop, and click **Start Session**; no terminal or separate app launch is
+needed. Allow local-network access if the browser asks. Registration pages
+refresh the detected-device list automatically. The hosted backend cannot scan
+the admin laptop's hotspot directly.
 
 The previous local database files are not imported automatically. Existing
 records were removed as requested.
@@ -46,10 +59,9 @@ The backend creates the required tables on startup. If using a Render database's
 internal connection URL, keep the database and web service in the same region.
 After pushing changes to `main`, wait for the Render deploy to finish and open
 the public service URL. `/api/health` should return `{"status":"ok"}` when the
-service can connect to PostgreSQL. During attendance sessions, the admin must
-open the dashboard on the Windows computer hosting the hotspot and run
-`node backend/local-agent.js` on that computer so hotspot scans can be published
-to Render.
+service can connect to PostgreSQL. During attendance sessions, leave the admin
+dashboard open on the Windows laptop hosting the hotspot. The local scanner
+starts automatically when the admin signs into Windows.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

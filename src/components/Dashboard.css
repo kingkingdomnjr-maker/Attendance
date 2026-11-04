@@ -33,6 +33,13 @@
   border-radius: 14px;
 }
 
+.device-detection-status {
+  margin: 8px 0 0;
+  color: #7c2d12;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .studentcard button {
   padding: 12px 20px;
   margin: 10px 10px 10px 0;

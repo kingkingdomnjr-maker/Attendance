@@ -10,6 +10,7 @@ function Dashboard() {
   const [sessionActive, setSessionActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [registeredStudents, setRegisteredStudents] = useState([]);
+  const [deviceDetectionMessage, setDeviceDetectionMessage] = useState("");
 
   async function fetchAttendance() {
     try {
@@ -149,12 +150,18 @@ function Dashboard() {
     async function detectDevices() {
       try {
         const localResponse = await fetch("http://localhost:3002/devices");
-
+        const deviceData = await localResponse.json();
         if (!localResponse.ok) {
-          throw new Error("Local device detection failed.");
+          throw new Error(deviceData.error || "Local device detection failed.");
         }
 
-        const deviceData = await localResponse.json();
+        setDeviceDetectionMessage(
+          deviceData.warnings?.length
+            ? deviceData.warnings.join(" ")
+            : deviceData.clients?.length
+              ? `Detected ${deviceData.clients.length} hotspot device(s).`
+              : "Scanner is running, but no hotspot devices are connected."
+        );
         const data = await apiRequest("/api/devices", "POST", deviceData);
 
         if (data.active) {
@@ -163,10 +170,11 @@ function Dashboard() {
           setSessionActive(false);
         }
       } catch (error) {
-        console.error(
-          "Automatic device detection failed. Ensure the local detection service is running:",
-          error.message
-        );
+        const message =
+          `Cannot scan the hotspot from this computer. Run "npm run device-agent" ` +
+          `on the Windows computer hosting the hotspot. ${error.message}`;
+        setDeviceDetectionMessage(message);
+        console.error("Automatic device detection failed:", error.message);
       }
     }
 
@@ -213,6 +221,10 @@ const absentStudents = 0;
         <p>
           Session status: {sessionActive ? "Active" : "Not confirmed active"}
         </p>
+
+        {sessionActive && deviceDetectionMessage && (
+          <p className="device-detection-status">{deviceDetectionMessage}</p>
+        )}
 
         {sessionMessage && <p>{sessionMessage}</p>}
 
