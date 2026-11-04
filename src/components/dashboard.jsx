@@ -149,7 +149,7 @@ function Dashboard() {
 
     async function detectDevices() {
       try {
-        const localResponse = await fetch("http://localhost:3002/devices");
+        const localResponse = await fetch("http://127.0.0.1:3002/devices");
         const deviceData = await localResponse.json();
         if (!localResponse.ok) {
           throw new Error(deviceData.error || "Local device detection failed.");
@@ -171,8 +171,9 @@ function Dashboard() {
         }
       } catch (error) {
         const message =
-          `Cannot scan the hotspot from this computer. Run "npm run device-agent" ` +
-          `on the Windows computer hosting the hotspot. ${error.message}`;
+          "Cannot reach the hotspot scanner on this device. Open the admin " +
+          "dashboard on the same Windows laptop that hosts the hotspot, and " +
+          "make sure its one-time scanner setup is installed and running.";
         setDeviceDetectionMessage(message);
         console.error("Automatic device detection failed:", error.message);
       }
