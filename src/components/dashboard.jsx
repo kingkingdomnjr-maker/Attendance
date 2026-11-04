@@ -1,7 +1,9 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import API_URL from "../api";
 import "./Dashboard.css";
+
+const LOCAL_SCANNER_URL = "http://127.0.0.1:3002";
 
 function Dashboard() {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -11,6 +13,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [registeredStudents, setRegisteredStudents] = useState([]);
   const [deviceDetectionMessage, setDeviceDetectionMessage] = useState("");
+  const scanInProgress = useRef(false);
 
   async function fetchAttendance() {
     try {
@@ -99,6 +102,7 @@ function Dashboard() {
   async function startSession() {
     setLoading(true);
     setSessionMessage("");
+    setDeviceDetectionMessage("");
 
     try {
       const data = await apiRequest("/api/session/start", "POST");
@@ -121,6 +125,7 @@ function Dashboard() {
       const data = await apiRequest("/api/session/stop", "POST");
       setSessionActive(false);
       setCurrentSessionStart(null);
+      setDeviceDetectionMessage("");
       setSessionMessage(data.message);
     } catch (error) {
       setSessionMessage(error.message);
@@ -142,47 +147,81 @@ function Dashboard() {
     fetchCurrentSession();
   }, []);
 
+  async function detectDevices() {
+    if (!sessionActive || scanInProgress.current) {
+      return;
+    }
+
+    scanInProgress.current = true;
+    setDeviceDetectionMessage("Checking the hotspot scanner...");
+    let deviceData;
+    try {
+      const localResponse = await fetch(`${LOCAL_SCANNER_URL}/devices`, {
+        cache: "no-store",
+      });
+      const responseText = await localResponse.text();
+      try {
+        deviceData = JSON.parse(responseText);
+      } catch {
+        throw new Error("The local scanner returned an invalid response.");
+      }
+
+      if (!localResponse.ok) {
+        throw new Error(deviceData.error || "Local device detection failed.");
+      }
+
+      if (!Array.isArray(deviceData.clients)) {
+        throw new Error("The local scanner response did not include a device list.");
+      }
+    } catch (error) {
+      setDeviceDetectionMessage(
+        "Cannot reach the hotspot scanner on this device. Open the admin " +
+          "dashboard on the Windows laptop hosting the hotspot, install or " +
+          "start the scanner, and allow this site to access the local network " +
+          "in your browser. Check the scanner at " +
+          `${LOCAL_SCANNER_URL}/health.`
+      );
+      console.error("Automatic device detection failed:", error.message);
+      scanInProgress.current = false;
+      return;
+    }
+
+    const warnings = Array.isArray(deviceData.warnings)
+      ? deviceData.warnings
+      : [];
+    setDeviceDetectionMessage(
+      warnings.length
+        ? warnings.join(" ")
+        : deviceData.clients.length
+          ? `Detected ${deviceData.clients.length} hotspot device(s).`
+          : "Scanner is running, but no hotspot devices are connected."
+    );
+    try {
+      const data = await apiRequest("/api/devices", "POST", deviceData);
+      if (data.active) {
+        await fetchAttendance();
+      } else {
+        setSessionActive(false);
+      }
+    } catch (error) {
+      setDeviceDetectionMessage(
+        `The scanner found ${deviceData.clients.length} device(s), but the hosted attendance service could not update. ${error.message}`
+      );
+      console.error("Could not send device scan to attendance service:", error.message);
+    } finally {
+      scanInProgress.current = false;
+    }
+  }
+
   useEffect(() => {
     if (!sessionActive) {
       return;
     }
 
-    async function detectDevices() {
-      try {
-        const localResponse = await fetch("http://127.0.0.1:3002/devices");
-        const deviceData = await localResponse.json();
-        if (!localResponse.ok) {
-          throw new Error(deviceData.error || "Local device detection failed.");
-        }
-
-        setDeviceDetectionMessage(
-          deviceData.warnings?.length
-            ? deviceData.warnings.join(" ")
-            : deviceData.clients?.length
-              ? `Detected ${deviceData.clients.length} hotspot device(s).`
-              : "Scanner is running, but no hotspot devices are connected."
-        );
-        const data = await apiRequest("/api/devices", "POST", deviceData);
-
-        if (data.active) {
-          await fetchAttendance();
-        } else {
-          setSessionActive(false);
-        }
-      } catch (error) {
-        const message =
-          "Cannot reach the hotspot scanner on this device. Open the admin " +
-          "dashboard on the same Windows laptop that hosts the hotspot, and " +
-          "make sure its one-time scanner setup is installed and running.";
-        setDeviceDetectionMessage(message);
-        console.error("Automatic device detection failed:", error.message);
-      }
-    }
-
     detectDevices();
     const intervalId = setInterval(detectDevices, 5000);
     return () => clearInterval(intervalId);
-}, [sessionActive]);
+  }, [sessionActive]);
 
   const totalStudents = registeredStudents.length;
 
@@ -224,7 +263,15 @@ const absentStudents = 0;
         </p>
 
         {sessionActive && deviceDetectionMessage && (
-          <p className="device-detection-status">{deviceDetectionMessage}</p>
+          <p className="device-detection-status" role="status">
+            {deviceDetectionMessage}
+          </p>
+        )}
+
+        {sessionActive && (
+          <button type="button" onClick={detectDevices}>
+            Check hotspot devices
+          </button>
         )}
 
         {sessionMessage && <p>{sessionMessage}</p>}

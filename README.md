@@ -44,9 +44,17 @@ The setup installs the scanner dependencies and registers it to start whenever
 you sign in to Windows. It also starts the scanner immediately. After this
 one-time setup, keep Mobile hotspot enabled, open the admin dashboard on the
 same laptop, and click **Start Session**; no terminal or separate app launch is
-needed. Allow local-network access if the browser asks. Registration pages
-refresh the detected-device list automatically. The hosted backend cannot scan
-the admin laptop's hotspot directly.
+needed. Click **Check hotspot devices** and allow local-network access if the
+browser asks. Registration pages refresh the detected-device list
+automatically. The hosted backend cannot scan the admin laptop's hotspot
+directly.
+
+If the dashboard says it cannot reach the scanner, open
+`http://127.0.0.1:3002/health` in a browser on the hotspot laptop; it should
+show `{"status":"ok"}`. If it does not, run the setup command above again.
+If it does, allow local-network access for the deployed dashboard in browser
+site settings, then reload the dashboard. The dashboard must be open on the
+same Windows laptop that is hosting Mobile hotspot.
 
 The previous local database files are not imported automatically. Existing
 records were removed as requested.
