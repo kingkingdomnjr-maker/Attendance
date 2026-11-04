@@ -192,7 +192,7 @@ function StudentRegister() {
               {devices.length === 0 ? (
                 <div className="empty-devices">
                   <p>{detecting ? "Searching for connected phones..." : "No phones detected."}</p>
-                  <p>Connect to the hotspot and refresh the list.</p>
+                  <p>Connect to the hotspot and refresh. If no phones appear, ask the admin to open the dashboard and start its local device detection service.</p>
                 </div>
               ) : (
                 <div className="device-list">

@@ -142,37 +142,37 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
-  if (!sessionActive) {
-    return;
-  }
-
-  const intervalId = setInterval(async () => {
-  try {
-    const localResponse = await fetch("http://localhost:3002/devices");
-
-    if (!localResponse.ok) {
-      throw new Error("Local device detection failed.");
+    if (!sessionActive) {
+      return;
     }
 
-    const deviceData = await localResponse.json();
+    async function detectDevices() {
+      try {
+        const localResponse = await fetch("http://localhost:3002/devices");
 
-    const data = await apiRequest(
-      "/api/devices",
-      "POST",
-      deviceData
-    );
-    
-    if (data.active) {
-      await fetchAttendance();
-    } else {
-      setSessionActive(false);
+        if (!localResponse.ok) {
+          throw new Error("Local device detection failed.");
+        }
+
+        const deviceData = await localResponse.json();
+        const data = await apiRequest("/api/devices", "POST", deviceData);
+
+        if (data.active) {
+          await fetchAttendance();
+        } else {
+          setSessionActive(false);
+        }
+      } catch (error) {
+        console.error(
+          "Automatic device detection failed. Ensure the local detection service is running:",
+          error.message
+        );
+      }
     }
-  } catch (error) {
-    console.error("Automatic device detection failed:", error.message);
-  }
-}, 5000);
 
-  return () => clearInterval(intervalId);
+    detectDevices();
+    const intervalId = setInterval(detectDevices, 5000);
+    return () => clearInterval(intervalId);
 }, [sessionActive]);
 
   const totalStudents = registeredStudents.length;

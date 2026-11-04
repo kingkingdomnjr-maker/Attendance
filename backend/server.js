@@ -1,9 +1,7 @@
 
 const express = require("express");
 const cors = require("cors");
-const { execFile } = require("child_process");
 const path = require("path");
-const { promisify } = require("util");
 const fs = require("fs");
 
 const bcrypt = require("bcryptjs");
@@ -33,7 +31,6 @@ const allowedOrigins = [
 ];
 
 const app = express();
-const runFile = promisify(execFile);
 
 
 const adminUsername = process.env.ADMIN_USERNAME;
@@ -70,6 +67,17 @@ function verifyAdmin(req, res, next) {
 const SESSION_DURATION_MS = 2 * 60 * 60 * 1000;
 
 let activeSession = null;
+let detectedDevices = [];
+let detectedDevicesAt = 0;
+const DEVICE_SCAN_MAX_AGE_MS = 15000;
+
+function getRecentDetectedDevices() {
+  if (Date.now() - detectedDevicesAt > DEVICE_SCAN_MAX_AGE_MS) {
+    return [];
+  }
+
+  return detectedDevices;
+}
 
 app.use(
   cors({
@@ -140,30 +148,9 @@ app.post("/api/students/register", async (req, res) => {
   }
 
   try {
-    // Detect devices connected to the admin's hotspot.
-    const scriptPath = path.join(__dirname, "detect-devices.ps1");
-
-    const { stdout } = await runFile(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        scriptPath,
-      ],
-      {
-        timeout: 15000,
-        windowsHide: true,
-        maxBuffer: 1024 * 1024,
-      }
-    );
-
-    const data = JSON.parse(stdout.trim());
     const selectedMac = macAddress.trim().toLowerCase();
 
-    const deviceIsConnected = (data.clients || []).some(
+    const deviceIsConnected = getRecentDetectedDevices().some(
       (client) =>
         client.macAddress &&
         client.macAddress.trim().toLowerCase() === selectedMac
@@ -375,6 +362,8 @@ app.post("/api/session/start", verifyAdmin, async (req, res) => {
 
   const startedAt = Date.now();
 
+  detectedDevices = [];
+  detectedDevicesAt = 0;
   activeSession = {
     startedAt,
     endsAt: startedAt + SESSION_DURATION_MS,
@@ -403,41 +392,9 @@ app.get("/api/registration/devices", async (req, res) => {
     });
   }
 
-  try {
-    const scriptPath = path.join(__dirname, "detect-devices.ps1");
-
-    const { stdout } = await runFile(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        scriptPath,
-      ],
-      {
-        timeout: 15000,
-        windowsHide: true,
-        maxBuffer: 1024 * 1024,
-      }
-    );
-
-    const data = JSON.parse(stdout.trim());
-
-    res.json({
-      clients: data.clients || [],
-    });
-  } catch (error) {
-    console.error(
-      "Registration device detection failed:",
-      error.message
-    );
-
-    res.status(500).json({
-      message: "Could not detect hotspot devices.",
-    });
-  }
+  res.json({
+    clients: getRecentDetectedDevices(),
+  });
 });
 // 2. Check the current session.
 app.get("/api/session", (req, res) => {
@@ -468,6 +425,8 @@ app.post("/api/session/stop", verifyAdmin, async (req, res) => {
 
   const stoppedSession = activeSession;
   activeSession = null;
+  detectedDevices = [];
+  detectedDevicesAt = 0;
 
   try {
     await finishSession(stoppedSession.startedAt);
@@ -485,10 +444,12 @@ app.post("/api/session/stop", verifyAdmin, async (req, res) => {
 });
 
 // 4. Detect hotspot devices ONLY during an active session.
-app.get("/api/devices", verifyAdmin, async (req, res) => {
+app.post("/api/devices", verifyAdmin, async (req, res) => {
   const session = getSessionStatus();
 
   if (!session) {
+    detectedDevices = [];
+    detectedDevicesAt = 0;
     return res.json({
       active: false,
       message: "Start an attendance session first.",
@@ -497,78 +458,65 @@ app.get("/api/devices", verifyAdmin, async (req, res) => {
     });
   }
 
+  if (!Array.isArray(req.body.clients)) {
+    return res.status(400).json({
+      message: "A device scan with a clients array is required.",
+    });
+  }
+
   try {
-    const scriptPath = path.join(
-      __dirname,
-      "detect-devices.ps1"
-    );
+    detectedDevices = req.body.clients
+      .filter(
+        (client) =>
+          client &&
+          typeof client.macAddress === "string" &&
+          client.macAddress.trim()
+      )
+      .map((client) => ({
+        macAddress: client.macAddress.trim(),
+        hostNames: Array.isArray(client.hostNames)
+          ? client.hostNames.filter((hostName) => typeof hostName === "string")
+          : [],
+      }));
+    detectedDevicesAt = Date.now();
 
-    const { stdout } = await runFile(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        scriptPath,
-      ],
-      {
-        timeout: 15000,
-        windowsHide: true,
-        maxBuffer: 1024 * 1024,
+    const students = await getStudents();
+    const markedStudents = [];
+
+    for (const client of detectedDevices) {
+      const deviceMac = client.macAddress.toLowerCase();
+      const student = students.find(
+        (item) =>
+          item.macAddress &&
+          item.macAddress.trim().toLowerCase() === deviceMac
+      );
+
+      if (student) {
+        const wasMarked = await markStudentPresent(student, session);
+
+        if (wasMarked) {
+          markedStudents.push({
+            name: student.name,
+            rollNumber: student.rollNumber,
+          });
+        }
       }
-    );
-
-    
-const data = JSON.parse(stdout.trim());
-
-// Load registered students
-const students = await getStudents();
-const markedStudents = [];
-
-// Check each connected hotspot device
-for (const client of data.clients || []) {
-  if (!client.macAddress) {
-    continue;
-  }
-
-  const deviceMac = client.macAddress.trim().toLowerCase();
-
-  // Find the student linked to this device
-  const student = students.find(
-    (item) =>
-      item.macAddress &&
-      item.macAddress.trim().toLowerCase() === deviceMac
-  );
-
-  // Mark the student present if linked
-  if (student) {
-    const wasMarked = await markStudentPresent(student, session);
-
-    
-    if (wasMarked) {
-      markedStudents.push({
-        name: student.name,
-        rollNumber: student.rollNumber,
-      });
     }
-  }
-}
 
-res.json({
-  active: true,
-  ...data,
-  markedStudents,
-});
+    res.json({
+      active: true,
+      clientCount: detectedDevices.length,
+      clients: detectedDevices,
+      markedStudents,
+    });
   } catch (error) {
     console.error(
-      "Device detection failed:",
+      "Could not process hotspot device scan:",
       error.message
     );
 
     res.status(500).json({
-      error: "Could not retrieve hotspot clients.",
+      error: "Could not process hotspot device scan.",
       details: error.message,
     });
   }
